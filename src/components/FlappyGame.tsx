@@ -67,10 +67,13 @@ const PIPE_WIDTH = 80;
 const PIPE_SPEED = 4;
 const PIPE_GAP = 110;
 const BIRD_SIZE = 34;
+const FIXED_TIME_STEP = 1000 / 60; // 16.67ms for 60 FPS
 
 const FlappyGame: React.FC<FlappyGameProps> = ({ walletAddress, lives, bestScore, refreshPlayerStats, refreshLeaderboard }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
+  const lastTimeRef = useRef<number>(0);
+  const accumulatorRef = useRef<number>(0);
   const [currentTheme, setCurrentTheme] = useState<keyof typeof THEMES>('classic');
   const [unlockedThemes, setUnlockedThemes] = useState<Set<keyof typeof THEMES>>(new Set(['classic']));
 
@@ -228,6 +231,7 @@ const FlappyGame: React.FC<FlappyGameProps> = ({ walletAddress, lives, bestScore
         return prev;
       }
 
+      // Fixed time step physics update
       const newBirdY = prev.birdY + prev.birdVelocity;
       const newVelocity = prev.birdVelocity + GRAVITY;
 
@@ -308,13 +312,28 @@ const FlappyGame: React.FC<FlappyGameProps> = ({ walletAddress, lives, bestScore
     });
   }, [handleScoreUpdate]);
 
-  // Game loop
+  // Fixed time step game loop (industry standard)
   useEffect(() => {
     if (gameState.isPlaying && !gameState.gameOver) {
-      const animate = () => {
-        gameLoop();
+      const animate = (currentTime: number) => {
+        // Calculate delta time
+        const deltaTime = currentTime - lastTimeRef.current;
+        lastTimeRef.current = currentTime;
+        
+        // Accumulate time
+        accumulatorRef.current += deltaTime;
+        
+        // Run physics updates at fixed time step
+        while (accumulatorRef.current >= FIXED_TIME_STEP) {
+          gameLoop();
+          accumulatorRef.current -= FIXED_TIME_STEP;
+        }
+        
         animationRef.current = requestAnimationFrame(animate);
       };
+      
+      // Initialize time reference
+      lastTimeRef.current = performance.now();
       animationRef.current = requestAnimationFrame(animate);
       
       return () => {

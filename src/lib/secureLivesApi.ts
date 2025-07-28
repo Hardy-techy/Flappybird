@@ -119,26 +119,17 @@ export function isSessionValid(wallet: string): boolean {
 // Secure version of getPlayerStats - uses session verification
 export async function getPlayerStats(wallet: string): Promise<{ lives: number, best_score: number }> {
   if (!wallet) {
-    console.log('No wallet address provided for getPlayerStats');
     return { lives: 0, best_score: 0 };
   }
 
-  try {
-    console.log('Attempting to get player stats for wallet:', wallet);
-    const { data, error, status } = await supabase
-      .from('player_stats')
-      .select('lives, best_score')
-      .eq('wallet', wallet.toLowerCase())
-      .maybeSingle();
-      
-    console.log('Player stats result:', { data, error, status });
+  const { data, error, status } = await supabase
+    .from('player_stats')
+    .select('lives, best_score')
+    .eq('wallet', wallet.toLowerCase())
+    .maybeSingle();
     
-    if (error && status !== 406) throw error;
-    return { lives: data?.lives ?? 0, best_score: data?.best_score ?? 0 };
-  } catch (error) {
-    console.error('Error getting player stats:', error);
-    return { lives: 0, best_score: 0 };
-  }
+  if (error && status !== 406) throw error;
+  return { lives: data?.lives ?? 0, best_score: data?.best_score ?? 0 };
 }
 
 // Set lives without session verification
@@ -195,22 +186,14 @@ export async function decrementLives(wallet: string) {
 
 // Public leaderboard (no verification needed for reading)
 export async function getLeaderboard(limit = 10) {
-  try {
-    console.log('Attempting to get leaderboard with limit:', limit);
-    const { data, error } = await supabase
-      .from('player_stats')
-      .select('wallet, best_score')
-      .order('best_score', { ascending: false })
-      .limit(limit);
-      
-    console.log('Leaderboard result:', { data, error });
+  const { data, error } = await supabase
+    .from('player_stats')
+    .select('wallet, best_score')
+    .order('best_score', { ascending: false })
+    .limit(limit);
     
-    if (error) throw error;
-    return data ?? [];
-  } catch (error) {
-    console.error('Error getting leaderboard:', error);
-    return [];
-  }
+  if (error) throw error;
+  return data ?? [];
 }
 
 // Get player rank in leaderboard
